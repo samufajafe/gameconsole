@@ -148,6 +148,34 @@ main { padding: 16px 20px 40px; max-width: 1400px; margin: 0 auto; }
 .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .controls input[type='number'] { width: 90px; }
 
+/* Battleship */
+.warn { color: var(--warn); font-weight: 600; }
+.bs-boards { display: flex; flex-wrap: wrap; gap: 14px; }
+.bs-boards figure { margin: 0; flex: 1 1 200px; min-width: 0; }
+.bs-boards figcaption { font-size: 13px; margin-bottom: 4px; }
+.bs-grid { display: grid; grid-template-columns: 16px repeat(var(--n), minmax(0, 1fr)); gap: 2px; max-width: 320px; }
+.bs-h { font-size: 10px; color: var(--muted); display: flex; align-items: center; justify-content: center; }
+.bs-cell {
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--battleship) 12%, var(--surface));
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  line-height: 1;
+}
+button.bs-cell:hover { background: color-mix(in srgb, var(--battleship) 40%, var(--surface)); filter: none; }
+.bs-cell.ship { background: color-mix(in srgb, var(--muted) 45%, var(--surface)); }
+.bs-cell.miss { color: var(--muted); }
+.bs-cell.hit { background: var(--warn); color: #fff; border-color: var(--warn); }
+.bs-cell.sunk { background: var(--bad); color: #fff; border-color: var(--bad); }
+.ai-decision { font-size: 13px; margin: 8px 0; }
+
 /* Panel */
 .panel-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .panel-head h2 { margin: 0 0 8px; }

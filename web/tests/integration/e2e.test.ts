@@ -15,10 +15,16 @@ import { HttpIngestTransport } from '../../src/events/IngestTransport';
 import { MatchEmitter } from '../../src/events/MatchEmitter';
 import { StackedDeck } from '../../src/games/blackjack/Deck';
 import { BlackjackGame } from '../../src/games/blackjack/BlackjackGame';
+import { AI_ID, BattleshipGame } from '../../src/games/battleship/BattleshipGame';
+import { Coord } from '../../src/games/battleship/Coord';
+import { STANDARD_FLEET } from '../../src/games/battleship/Fleet';
+import { PrologAI } from '../../src/games/battleship/PrologAI';
+import { Ship } from '../../src/games/battleship/Ship';
 import { GameStatsClient, type MatchResult } from '../../src/panel/GameStatsClient';
 
 const INGEST = process.env.GAMESTATS_INGEST_URL;
 const ANALYTICS = process.env.GAMESTATS_ANALYTICS_URL;
+const PROLOG = process.env.PROLOG_URL;
 
 const transport = new HttpIngestTransport(INGEST);
 const client = new GameStatsClient(INGEST, ANALYTICS);
@@ -108,5 +114,32 @@ describe.skipIf(!INGEST || !ANALYTICS)('punta a punta con GameStats', () => {
       expect(r.eventCount).toBe(p.em.stats.delivered);
       expect(r.players.map((x) => x.playerId)).toEqual([p.game.participants[0]!.id]);
     }
+  });
+});
+
+describe.skipIf(!INGEST || !ANALYTICS || !PROLOG)('punta a punta con GameStats y la IA en Prolog', () => {
+  it('battleship: la IA real juega cada turno y GameStats analiza la partida', async () => {
+    const jugador = `e2e-bs-${Date.now()}`;
+    const em = new MatchEmitter(transport);
+    // La flota de la IA es conocida para que el humano gane en 17 disparos; la del humano es al azar.
+    const flotaIA = STANDARD_FLEET.map((s, i) => Ship.straight(s.ship, s.size, new Coord(i * 2, 0), true));
+    const game = new BattleshipGame(em, Player.human(jugador), { strategy: new PrologAI(PROLOG), aiShips: flotaIA });
+    game.start();
+    for (const c of flotaIA.flatMap((s) => s.cells)) {
+      game.fire(c);
+      await game.whenAiDone();
+      expect(game.ai.failures).toBe(0);
+    }
+    expect(game.winnerId).toBe(jugador);
+    await em.whenIdle();
+    expect(em.stats).toMatchObject({ dead: 0, queued: 0 });
+
+    const r = await resultado(game.matchId);
+    expect(r.match.winnerId).toBe(jugador);
+    expect(r.match.gameSpecific).toMatchObject({ boardSize: 10, shotsToWin: 17 });
+    expect(r.generic?.eventsByType).toMatchObject({ AI_DECISION: 16, SHOT_FIRED: 33 });
+    const yo = r.players.find((p) => p.playerId === jugador)!;
+    expect(yo.gameSpecific).toMatchObject({ shots: 17, hits: 17, shipsSunk: 5 });
+    expect(r.players.find((p) => p.playerId === AI_ID)?.gameSpecific).toMatchObject({ shots: 16 });
   });
 });
