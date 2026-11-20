@@ -1,13 +1,12 @@
 import { HttpIngestTransport } from '../events/IngestTransport';
 import { GameStatsClient } from '../panel/GameStatsClient';
 import { StatsPanel } from '../panel/StatsPanel';
+import { aliasValido, REGLA_ALIAS } from './alias';
 import type { GameDescriptor } from './GameDescriptor';
 import { el, esc } from './html';
 import { InstanceManager } from './InstanceManager';
 
 const CLAVE_ALIAS = 'gameconsole.alias';
-/** Ids que ya usan los bots; un humano con el mismo id se mezclaria con ellos en GameStats. */
-const RESERVADOS = new Set(['dealer', 'prolog-ai']);
 
 /**
  * La consola: catalogo de juegos, partidas simultaneas y panel de GameStats.
@@ -101,10 +100,9 @@ export class ConsoleApp {
   }
 
   private validarAlias(): boolean {
-    const a = this.alias;
-    const ok = /^[\w.-]{1,32}$/.test(a) && !RESERVADOS.has(a);
+    const ok = aliasValido(this.alias);
     this.q('#alias').classList.toggle('invalid', !ok);
-    if (!ok) alert('Elige un alias de 1 a 32 caracteres (letras, números, . _ -), distinto de "dealer" y "prolog-ai".');
+    if (!ok) alert(`Elige un alias de ${REGLA_ALIAS}.`);
     return ok;
   }
 

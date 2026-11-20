@@ -176,6 +176,28 @@ button.bs-cell:hover { background: color-mix(in srgb, var(--battleship) 40%, var
 .bs-cell.sunk { background: var(--bad); color: #fff; border-color: var(--bad); }
 .ai-decision { font-size: 13px; margin: 8px 0; }
 
+/* Racing */
+.race { outline: none; border-radius: 8px; }
+.race:focus-visible, .race:focus { box-shadow: 0 0 0 2px var(--racing); }
+.race-help { font-size: 13px; margin: 0 0 6px; }
+kbd { font: 12px ui-monospace, monospace; padding: 0 5px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; }
+.race-count { font-size: 20px; font-weight: 700; color: var(--warn); }
+.race-count.go { color: var(--good); }
+.lane { margin-bottom: 10px; }
+.lane-label { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.track {
+  position: relative;
+  height: 32px;
+  margin: 4px 0 2px;
+  border-radius: 6px;
+  background: repeating-linear-gradient(90deg, #555 0 18px, #666 18px 36px);
+  border-right: 6px solid;
+  border-image: repeating-linear-gradient(0deg, #fff 0 6px, #111 6px 12px) 6;
+}
+.car { position: absolute; top: 3px; font-size: 22px; line-height: 1; transform: scaleX(-1); transition: left 80ms linear; }
+.lane-laps { font-size: 12px; min-height: 1.2em; }
+.tag.bad { color: var(--bad); border-color: var(--bad); }
+
 /* Panel */
 .panel-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .panel-head h2 { margin: 0 0 8px; }

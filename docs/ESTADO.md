@@ -33,8 +33,9 @@ El plan aprobado está resumido aquí; el contrato con GameStats está en [`CONT
 | Blackjack (`web/src/games/blackjack`) + vista | compila, probado |
 | Consola (`web/src/console`) y panel (`web/src/panel`) | compila; prueba a mano en el navegador pendiente |
 | Battleship (`web/src/games/battleship`): `Coord`, `Ship`, `Board`, `Fleet`, `BattleshipGame`, `ShotStrategy` + `PrologAI`, vista | compila, probado; emite `AI_DECISION`; si Prolog no responde muestra "IA no disponible, reintentando" |
-| Tests vitest: contrato (JSON Schema de P1), emisor, blackjack, battleship | **47/47 pasan** |
-| Test e2e contra GameStats v1.4 real (blackjack: sesión, abandono, 5 concurrentes; battleship con la IA real en Prolog) | **4/4 pasan** |
+| Racing (`web/src/games/racing`): `RacingGame`, `Racer`, vista con teclado (A/D contra J/L, solo con foco) | compila, probado; salida en falso → `PENALTY` de 3 s (una por piloto) |
+| Tests vitest: contrato (JSON Schema de P1), emisor, blackjack, battleship, racing | **54/54 pasan** |
+| Test e2e contra GameStats v1.4 real (blackjack: sesión, abandono, 5 concurrentes; battleship con la IA real; racing: la penalización cambia el ganador y da `comeback`) | **5/5 pasan** |
 | nginx, `web/Dockerfile`, `docker-compose.yml`, `docker-compose.local.yml` | probados: `compose up --wait` deja los 4 servicios sanos; el proxy responde en las 3 rutas |
 | IA Prolog (`prolog/battleship_ai.pl`, `server.pl`, `tests.pl`, `Dockerfile`) | **13/13 tests plunit pasan** con SWI-Prolog 10.0.2; servidor probado con curl |
 
@@ -44,7 +45,7 @@ Fase 1 verificada el 19 nov: `web/package-lock.json` generado y commiteado; se a
 
 1. ~~Verificar la Fase 1~~ **hecho**.
 2. ~~Fase 2: Battleship en TS con la IA de Prolog~~ **hecho**.
-3. **Fase 3**: Racing.
+3. ~~Fase 3: Racing~~ **hecho**.
 4. **Fase 4**: CI/CD en GitHub Actions (typecheck, vitest, plunit, build de imágenes y publish a
    GHCR multi-arch como en P1), `docker-compose.deploy.yml` y job `deploy` que prueba la imagen
    publicada sin login, y README (instalación, ejecución, deployment, decisiones técnicas, y que el

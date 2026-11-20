@@ -20,6 +20,7 @@ import { Coord } from '../../src/games/battleship/Coord';
 import { STANDARD_FLEET } from '../../src/games/battleship/Fleet';
 import { PrologAI } from '../../src/games/battleship/PrologAI';
 import { Ship } from '../../src/games/battleship/Ship';
+import { RacingGame } from '../../src/games/racing/RacingGame';
 import { GameStatsClient, type MatchResult } from '../../src/panel/GameStatsClient';
 
 const INGEST = process.env.GAMESTATS_INGEST_URL;
@@ -114,6 +115,41 @@ describe.skipIf(!INGEST || !ANALYTICS)('punta a punta con GameStats', () => {
       expect(r.eventCount).toBe(p.em.stats.delivered);
       expect(r.players.map((x) => x.playerId)).toEqual([p.game.participants[0]!.id]);
     }
+  });
+});
+
+describe.skipIf(!INGEST || !ANALYTICS)('punta a punta con GameStats: racing', () => {
+  it('una salida en falso cambia el ganador: GameStats suma la penalizacion', async () => {
+    const ana = `e2e-ana-${Date.now()}`;
+    const beto = `e2e-beto-${Date.now()}`;
+    let t = Date.now();
+    const em = new MatchEmitter(transport);
+    const game = new RacingGame(em, [Player.human(ana), Player.human(beto)], {
+      laps: 2,
+      pressesPerLap: 2,
+      clock: () => new Date(t),
+    });
+    const vuelta = (i: number) => {
+      game.press(i, 'left');
+      game.press(i, 'right');
+    };
+    game.start();
+    game.press(0, 'left'); // ana sale en falso: +3 s
+    game.go();
+    // Reloj comun desde la largada: ana cierra vueltas en 5 s y 10 s; beto en 6 s y 12 s.
+    t += 5000; vuelta(0);
+    t += 1000; vuelta(1);
+    t += 4000; vuelta(0); // ana llega primera: 10 s reales, 13 s ajustados
+    t += 2000; vuelta(1); // beto llega segundo con 12 s y gana
+    expect(game.status).toBe('FINISHED');
+    await em.whenIdle();
+    expect(em.stats).toMatchObject({ dead: 0, queued: 0 });
+
+    const r = await resultado(game.matchId);
+    expect(r.match.winnerId).toBe(beto);
+    expect(r.match.gameSpecific).toMatchObject({ laps: 2, fastestLapMs: 5000, fastestLapBy: ana });
+    expect(r.players.find((p) => p.playerId === ana)?.gameSpecific).toMatchObject({ penaltyMs: 3000, adjustedTimeMs: 13000 });
+    expect(r.patterns.some((p) => p.rule === 'comeback' && p.playerId === beto)).toBe(true);
   });
 });
 
