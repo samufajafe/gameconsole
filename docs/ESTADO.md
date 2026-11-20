@@ -28,20 +28,20 @@ El plan aprobado está resumido aquí; el contrato con GameStats está en [`CONT
 | Pieza | Estado |
 |---|---|
 | `docs/CONTRACT.md` | listo (Fase 0) |
-| Núcleo POO (`web/src/core`): `Game`, `Player`, `EventFactory`, `EventSink` | escrito, **sin compilar todavía** |
-| Emisor (`web/src/events`): `MatchEmitter`, `ExponentialBackoff`, `HttpIngestTransport`, `MemoryBuffer` | escrito, **sin compilar** |
-| Blackjack (`web/src/games/blackjack`) + vista | escrito, **sin compilar** |
-| Consola (`web/src/console`) y panel (`web/src/panel`) | escritos, **sin compilar** |
-| Tests vitest: contrato (JSON Schema de P1), emisor, blackjack, e2e contra GameStats | escritos, **sin correr** |
-| nginx, `web/Dockerfile`, `docker-compose.yml`, `docker-compose.local.yml` | escritos, **sin probar** |
+| Núcleo POO (`web/src/core`): `Game`, `Player`, `EventFactory`, `EventSink` | compila, probado |
+| Emisor (`web/src/events`): `MatchEmitter`, `ExponentialBackoff`, `HttpIngestTransport`, `MemoryBuffer` | compila, probado |
+| Blackjack (`web/src/games/blackjack`) + vista | compila, probado |
+| Consola (`web/src/console`) y panel (`web/src/panel`) | compila; prueba a mano en el navegador pendiente |
+| Tests vitest: contrato (JSON Schema de P1), emisor, blackjack | **30/30 pasan** |
+| Test e2e contra GameStats v1.4 real (sesión, abandono, 5 partidas concurrentes) | **3/3 pasan** |
+| nginx, `web/Dockerfile`, `docker-compose.yml`, `docker-compose.local.yml` | probados: `compose up --wait` deja los 4 servicios sanos; el proxy responde en las 3 rutas |
 | IA Prolog (`prolog/battleship_ai.pl`, `server.pl`, `tests.pl`, `Dockerfile`) | **13/13 tests plunit pasan** con SWI-Prolog 10.0.2; servidor probado con curl |
 
-Falta `web/package-lock.json`: se genera con el primer `npm install` (ver abajo) y se commitea.
+Fase 1 verificada el 19 nov: `web/package-lock.json` generado y commiteado; se agregó `@types/node` (faltaba para `process.env`).
 
 ## Pendiente, en orden
 
-1. **Verificar la Fase 1**: generar el lockfile, typecheck, tests, build; levantar compose, correr
-   el e2e y probar la UI en el navegador. Corregir lo que falle (el código TS nunca se compiló).
+1. ~~Verificar la Fase 1~~ **hecho**.
 2. **Fase 2**: Battleship en TS (`Coord`, `Ship`, `Board`, `Fleet`, `BattleshipGame`, `PrologAI`
    como implementación de una interfaz `ShotStrategy`, `BattleshipView`), emitir `AI_DECISION`,
    tests. Si Prolog no responde, mostrar "IA no disponible, reintentando" y reintentar: nunca jugar
