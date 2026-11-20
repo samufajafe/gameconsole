@@ -88,6 +88,30 @@ docker run --rm --network gameconsole_default -v "$PWD/web:/app" -w /app \
   -e PROLOG_URL=http://prolog:8090 node:22.11.0-alpine npx vitest run tests/integration
 ```
 
+### Concurrencia y caídas de GameStats
+
+```bash
+scripts/prueba-caida.sh            # en Windows, desde Git Bash
+```
+
+El script hace `docker compose pause ingest` y, con ingest congelado, juega **10 partidas a la
+vez** de los tres juegos repartidas en 3 "pestañas" (cada una con su transporte y sus emisores).
+Espera 15 s reintentando y luego hace `docker compose unpause ingest`. Comprueba que:
+
+1. los juegos terminan sin esperar a la red (en local, las 10 partidas se juegan en ~0,2 s);
+2. mientras dura la caída no se entrega nada y todo queda en cola;
+3. al volver ingest, cada partida llega sin rechazos y GameStats la analiza con **exactamente**
+   los eventos emitidos, sin mezclarse con las demás.
+
+Las peticiones que se cortaron por timeout siguen en el buffer TCP de ingest, y Go las procesa al
+hacer `unpause`. El reintento llega después, y Go lo responde `duplicate_event`. Go revisa el
+duplicado *antes* que `match_already_finished`, así que el emisor lo cuenta como entregado. Como
+cada lote es un prefijo de la cola de la partida, ningún evento se acepta antes que uno anterior.
+
+A mano, en el navegador: abrir varias instancias y otra pestaña, `docker compose pause ingest`,
+seguir jugando (el indicador de cada instancia pasa a "reintentando… N en cola") y después
+`docker compose unpause ingest`.
+
 En PowerShell se usa `${PWD}` en vez de `$PWD`, y la comilla invertida (`` ` ``) en vez de `\`
 para partir líneas.
 
@@ -106,7 +130,7 @@ para partir líneas.
 |---|---|
 | `web` | `npm ci`, typecheck, vitest y build en `node:22.11.0-alpine` |
 | `prolog` | pruebas plunit en `swipl:10.0.2` |
-| `e2e` | `docker compose up --build --wait`, prueba el proxy y corre los e2e contra GameStats real |
+| `e2e` | `docker compose up --build --wait`, prueba el proxy, corre los e2e contra GameStats real y la prueba de caída (`scripts/prueba-caida.sh`) |
 | `publish` | (solo push) publica `ghcr.io/samufajafe/gameconsole/web` y `.../prolog` para **amd64 y arm64**, con tags `sha-<commit>`, `latest` y `vX.Y` |
 | `deploy` | (solo push) baja las imágenes **publicadas**, sin `docker login`, con `docker-compose.deploy.yml`, y corre los e2e contra ellas |
 

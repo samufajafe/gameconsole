@@ -37,7 +37,8 @@ El plan aprobado está resumido aquí; el contrato con GameStats está en [`CONT
 | Tests vitest: contrato (JSON Schema de P1), emisor, blackjack, battleship, racing | **54/54 pasan** |
 | Test e2e contra GameStats v1.4 real (blackjack: sesión, abandono, 5 concurrentes; battleship con la IA real; racing: la penalización cambia el ganador y da `comeback`) | **5/5 pasan** |
 | nginx, `web/Dockerfile`, `docker-compose.yml`, `docker-compose.local.yml` | probados: `compose up --wait` deja los 4 servicios sanos; el proxy responde en las 3 rutas |
-| CI/CD (`.github/workflows/ci.yml`): jobs web, prolog, e2e, publish (GHCR multi-arch, matriz web/prolog) y deploy (imágenes publicadas sin login) | escrito; actionlint limpio; `docker-compose.deploy.yml` probado en local con las imágenes reetiquetadas (e2e 5/5) |
+| CI/CD (`.github/workflows/ci.yml`): jobs web, prolog, e2e, publish (GHCR multi-arch, matriz web/prolog) y deploy (imágenes publicadas sin login) | los 6 jobs pasan en GitHub (incluido `deploy` sin login: los paquetes de GHCR quedaron públicos) |
+| Prueba de caída (`scripts/prueba-caida.sh` + `web/tests/integration/caida.test.ts`): 10 partidas concurrentes en 3 "pestañas" con `pause ingest` | **pasa**; también corre en CI |
 | `README.md` (instalación, ejecución, pruebas, deployment, decisiones técnicas, conteo de instancias) | listo |
 | IA Prolog (`prolog/battleship_ai.pl`, `server.pl`, `tests.pl`, `Dockerfile`) | **13/13 tests plunit pasan** con SWI-Prolog 10.0.2; servidor probado con curl |
 
@@ -48,10 +49,11 @@ Fase 1 verificada el 19 nov: `web/package-lock.json` generado y commiteado; se a
 1. ~~Verificar la Fase 1~~ **hecho**.
 2. ~~Fase 2: Battleship en TS con la IA de Prolog~~ **hecho**.
 3. ~~Fase 3: Racing~~ **hecho**.
-4. ~~Fase 4: CI/CD y README~~ **hecho**. Tras el primer push hay que poner **públicos** los paquetes
-   `gameconsole/web` y `gameconsole/prolog` en GitHub → Packages, o el job `deploy` falla.
-5. **Fase 5**: concurrencia (varias instancias y pestañas, `pause`/`unpause` de ingest) y pulido de
-   la UI.
+4. ~~Fase 4: CI/CD y README~~ **hecho**.
+5. ~~Fase 5: concurrencia (varias instancias y pestañas, pause/unpause de ingest)~~ **hecho**
+   y automatizado. Falta: prueba a mano en el navegador (varias pestañas, `pause` con la UI
+   abierta) y pulido de UI según lo que salga.
+6. Opcional, solo si sobra tiempo: `EventBuffer` en IndexedDB + `navigator.locks`.
 
 Un commit por fase, con un resumen corto al terminar cada una.
 

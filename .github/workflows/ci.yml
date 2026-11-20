@@ -76,6 +76,11 @@ jobs:
             -e PROLOG_URL=http://prolog:8090 \
             "$NODE_IMAGE" sh -c "npm ci && npx vitest run tests/integration"
 
+      # 10 partidas concurrentes en 3 "pestanas" con ingest en pausa (pause/unpause, nunca
+      # stop/start): nada se pierde ni se mezcla al volver.
+      - name: Caida de GameStats
+        run: bash scripts/prueba-caida.sh
+
       - name: Logs si algo fallo
         if: failure()
         run: docker compose logs
