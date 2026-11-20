@@ -1,0 +1,47 @@
+# Levanta GameConsole completo con las imagenes PUBLICADAS en GitHub Container Registry, sin
+# compilar nada. Basta tener Docker y este archivo.
+#
+#   docker compose -f docker-compose.deploy.yml up -d --wait
+#   # consola: http://localhost:8000
+#   docker compose -f docker-compose.deploy.yml down
+#
+# GAMECONSOLE_TAG elige la version de la consola y la IA: `latest` (lo ultimo de main), `v1.0`
+# (un tag de git) o `sha-<commit>`. GameStats va fijo en la version entregada de P1.
+
+name: gameconsole
+
+x-gamestats: &gamestats
+  image: ghcr.io/gabo8086/gamestats:${GAMESTATS_TAG:-v1.4}
+
+services:
+  analytics:
+    <<: *gamestats
+    command: ["analytics"]
+    ports:
+      - "8081:8081"
+
+  ingest:
+    <<: *gamestats
+    command: ["ingest"]
+    environment:
+      ANALYTICS_URL: "http://analytics:8081"
+    ports:
+      - "8080:8080"
+    depends_on:
+      analytics:
+        condition: service_healthy
+
+  prolog:
+    image: ghcr.io/samufajafe/gameconsole/prolog:${GAMECONSOLE_TAG:-latest}
+    ports:
+      - "8090:8090"
+
+  console:
+    image: ghcr.io/samufajafe/gameconsole/web:${GAMECONSOLE_TAG:-latest}
+    ports:
+      - "8000:80"
+    depends_on:
+      ingest:
+        condition: service_healthy
+      prolog:
+        condition: service_healthy

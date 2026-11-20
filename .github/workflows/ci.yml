@@ -1,0 +1,168 @@
+# CI/CD de GameConsole. En cada PR: typecheck + vitest + build de la consola, pruebas plunit de la
+# IA en Prolog, y prueba de punta a punta con las imagenes construidas y GameStats real. En push a
+# main o en un tag v* ademas publica las dos imagenes en GitHub Container Registry (amd64 y arm64)
+# y prueba las imagenes PUBLICADAS sin login (jobs publish y deploy), como en GameStats (P1).
+#
+# npm corre dentro de node:22.11.0-alpine, la misma imagen que en desarrollo y en web/Dockerfile;
+# Prolog corre en swipl:10.0.2. Asi CI usa exactamente las mismas versiones que la maquina local.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    # git tag v1.0 && git push origin v1.0 publica la version fija de la entrega.
+    tags: ["v*"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_IMAGE: node:22.11.0-alpine
+  SWIPL_IMAGE: swipl:10.0.2
+
+jobs:
+  web:
+    name: Consola (TypeScript)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # --user evita que el contenedor deje archivos de root en el checkout.
+      - name: npm ci, typecheck, vitest y build
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+            -v "$PWD/web:/app" -w /app "$NODE_IMAGE" \
+            sh -c "npm ci && npm run typecheck && npm test && npm run build"
+
+  prolog:
+    name: IA (Prolog)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Pruebas plunit
+        run: |
+          docker run --rm -v "$PWD/prolog:/app:ro" -w /app "$SWIPL_IMAGE" \
+            swipl -g run_tests -t halt tests.pl
+
+  e2e:
+    name: Punta a punta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Construye la consola y Prolog (sus Dockerfiles vuelven a correr las pruebas) y baja
+      # GameStats v1.4 publicado.
+      - name: Construir y levantar
+        run: docker compose up --build -d --wait
+
+      - name: Proxy del mismo origen
+        run: |
+          curl -fsS http://localhost:8000/ | grep -q '<div id="app">'
+          curl -fsS http://localhost:8000/gamestats/ingest/health
+          curl -fsS http://localhost:8000/gamestats/analytics/health
+          curl -fsS http://localhost:8000/prolog/health
+
+      - name: Pruebas e2e contra GameStats y Prolog reales
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+            --network gameconsole_default -v "$PWD/web:/app" -w /app \
+            -e GAMESTATS_INGEST_URL=http://ingest:8080 \
+            -e GAMESTATS_ANALYTICS_URL=http://analytics:8081 \
+            -e PROLOG_URL=http://prolog:8090 \
+            "$NODE_IMAGE" sh -c "npm ci && npx vitest run tests/integration"
+
+      - name: Logs si algo fallo
+        if: failure()
+        run: docker compose logs
+
+      - name: Bajar todo
+        if: always()
+        run: docker compose down -v
+
+  # --------------------------------------------------------------------------- CD
+  # Solo en push a main o en un tag v*, y solo si todo lo anterior paso.
+
+  publish:
+    name: Publicar ${{ matrix.image }} en GHCR
+    if: github.event_name == 'push'
+    needs: [web, prolog, e2e]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        image: [web, prolog]
+    steps:
+      - uses: actions/checkout@v7
+
+      # QEMU para la variante arm64. La compilacion de la consola corre nativa ($BUILDPLATFORM).
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Tags: sha-<commit> siempre; latest en main; el tag git tal cual (v1.0) cuando se empuja uno.
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}/${{ matrix.image }}
+          tags: |
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.image }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  # Prueba lo que va a bajar cualquier persona: docker-compose.deploy.yml descarga las imagenes de
+  # ghcr.io en vez de construirlas. A proposito NO hace docker login: si un paquete de GHCR quedo
+  # privado, este job falla, que es justo lo que le pasaria a quien revisa.
+  deploy:
+    name: Probar las imagenes publicadas
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: El tag inmutable de este commit
+        run: echo "GAMECONSOLE_TAG=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - name: Descargar y levantar
+        run: |
+          docker compose -f docker-compose.deploy.yml pull
+          docker compose -f docker-compose.deploy.yml up -d --wait
+
+      - name: Pruebas e2e contra las imagenes publicadas
+        run: |
+          curl -fsS http://localhost:8000/prolog/health
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+            --network gameconsole_default -v "$PWD/web:/app" -w /app \
+            -e GAMESTATS_INGEST_URL=http://ingest:8080 \
+            -e GAMESTATS_ANALYTICS_URL=http://analytics:8081 \
+            -e PROLOG_URL=http://prolog:8090 \
+            "$NODE_IMAGE" sh -c "npm ci && npx vitest run tests/integration"
+
+      - name: Logs si algo fallo
+        if: failure()
+        run: docker compose -f docker-compose.deploy.yml logs
+
+      - name: Bajar todo
+        if: always()
+        run: docker compose -f docker-compose.deploy.yml down -v
