@@ -1,0 +1,51 @@
+# GameConsole completo: consola web + IA en Prolog + GameStats (P1).
+#
+#   docker compose up --build -d --wait     # levanta todo y espera a que este sano
+#   open http://localhost:8000              # la consola
+#   docker compose down
+#
+# GameStats se usa desde su imagen PUBLICADA (no se toca ../gamestats). GAMESTATS_IMAGE elige
+# otra; docker-compose.local.yml la construye desde ../gamestats.
+#
+# Dentro de la red de compose los servicios se llaman por nombre (http://ingest:8080), nunca
+# localhost.
+
+name: gameconsole
+
+x-gamestats: &gamestats
+  image: ${GAMESTATS_IMAGE:-ghcr.io/gabo8086/gamestats:v1.4}
+
+services:
+  analytics:
+    <<: *gamestats
+    command: ["analytics"]
+    ports:
+      - "8081:8081"   # para consultar GameStats con curl durante la demo
+
+  ingest:
+    <<: *gamestats
+    command: ["ingest"]
+    environment:
+      ANALYTICS_URL: "http://analytics:8081"
+    ports:
+      - "8080:8080"
+    depends_on:
+      analytics:
+        condition: service_healthy
+
+  prolog:
+    build: ./prolog
+    image: ${PROLOG_IMAGE:-gameconsole-prolog:latest}
+    ports:
+      - "8090:8090"   # para probar la IA con curl
+
+  console:
+    build: ./web
+    image: ${CONSOLE_IMAGE:-gameconsole-web:latest}
+    ports:
+      - "8000:80"
+    depends_on:
+      ingest:
+        condition: service_healthy
+      prolog:
+        condition: service_healthy
