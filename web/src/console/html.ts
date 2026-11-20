@@ -16,6 +16,30 @@ export function el<K extends keyof HTMLElementTagNameMap>(tag: K, className = ''
   return e;
 }
 
+/** Atributos que identifican un control para devolverle el foco despues de redibujar. */
+const CLAVES_FOCO = ['data-a', 'data-coord', 'data-cell', 'data-ship', 'data-f'];
+
+/**
+ * Reemplaza el contenido de `root` sin perder el foco del teclado: si estaba en un control con
+ * `data-a`/`data-coord`/..., se lo devuelve al control equivalente del HTML nuevo; si ese ya no
+ * existe, a `root` (que debe tener `tabIndex`). Asi los atajos y las flechas siguen funcionando.
+ */
+export function redibujar(root: HTMLElement, html: string): void {
+  const activo = document.activeElement as HTMLElement | null;
+  const dentro = !!activo && activo !== root && root.contains(activo);
+  const attr = dentro ? CLAVES_FOCO.find((a) => activo!.hasAttribute(a)) : undefined;
+  const selector = attr ? `[${attr}="${CSS.escape(activo!.getAttribute(attr)!)}"]` : null;
+  root.innerHTML = html;
+  if (!dentro) return;
+  const nuevo = selector ? root.querySelector<HTMLElement>(selector) : null;
+  (nuevo && !nuevo.hasAttribute('disabled') ? nuevo : root).focus({ preventScroll: true });
+}
+
+/** `true` si el usuario pidio menos movimiento en su sistema. */
+export function menosMovimiento(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 /** Muestra un valor de GameStats tal cual, con formato legible. No calcula nada. */
 export function formatValue(v: unknown): string {
   if (v === null || v === undefined) return '—';

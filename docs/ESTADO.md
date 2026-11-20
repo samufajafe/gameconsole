@@ -31,10 +31,11 @@ El plan aprobado está resumido aquí; el contrato con GameStats está en [`CONT
 | Núcleo POO (`web/src/core`): `Game`, `Player`, `EventFactory`, `EventSink` | compila, probado |
 | Emisor (`web/src/events`): `MatchEmitter`, `ExponentialBackoff`, `HttpIngestTransport`, `MemoryBuffer` | compila, probado |
 | Blackjack (`web/src/games/blackjack`) + vista | compila, probado |
-| Consola (`web/src/console`) y panel (`web/src/panel`) | compila; prueba a mano en el navegador pendiente |
+| Consola (`web/src/console`) y panel (`web/src/panel`) | tema arcade, diálogos propios (`dialog.ts`), indicador global de GameStats; recorrida con Playwright |
+| Colocación manual de la flota (`FleetPlacement`, `BattleshipGame.setPlayerFleet`) | probada; la flota al azar sigue siendo la opción por defecto |
 | Battleship (`web/src/games/battleship`): `Coord`, `Ship`, `Board`, `Fleet`, `BattleshipGame`, `ShotStrategy` + `PrologAI`, vista | compila, probado; emite `AI_DECISION`; si Prolog no responde muestra "IA no disponible, reintentando" |
 | Racing (`web/src/games/racing`): `RacingGame`, `Racer`, vista con teclado (A/D contra J/L, solo con foco) | compila, probado; salida en falso → `PENALTY` de 3 s (una por piloto) |
-| Tests vitest: contrato (JSON Schema de P1), emisor, blackjack, battleship, racing | **54/54 pasan** |
+| Tests vitest: contrato (JSON Schema de P1), emisor, blackjack, battleship (incluida la colocación manual), racing | **60/60 pasan** |
 | Test e2e contra GameStats v1.4 real (blackjack: sesión, abandono, 5 concurrentes; battleship con la IA real; racing: la penalización cambia el ganador y da `comeback`) | **5/5 pasan** |
 | nginx, `web/Dockerfile`, `docker-compose.yml`, `docker-compose.local.yml` | probados: `compose up --wait` deja los 4 servicios sanos; el proxy responde en las 3 rutas |
 | CI/CD (`.github/workflows/ci.yml`): jobs web, prolog, e2e, publish (GHCR multi-arch, matriz web/prolog) y deploy (imágenes publicadas sin login) | los 6 jobs pasan en GitHub (incluido `deploy` sin login: los paquetes de GHCR quedaron públicos) |
@@ -51,9 +52,13 @@ Fase 1 verificada el 19 nov: `web/package-lock.json` generado y commiteado; se a
 3. ~~Fase 3: Racing~~ **hecho**.
 4. ~~Fase 4: CI/CD y README~~ **hecho**.
 5. ~~Fase 5: concurrencia (varias instancias y pestañas, pause/unpause de ingest)~~ **hecho**
-   y automatizado. Falta: prueba a mano en el navegador (varias pestañas, `pause` con la UI
-   abierta) y pulido de UI según lo que salga.
-6. Opcional, solo si sobra tiempo: `EventBuffer` en IndexedDB + `navigator.locks`.
+   y automatizado.
+6. ~~Fase 6: UI arcade con heurísticas de Nielsen y colocación manual de la flota~~ **hecho**
+   (19 nov). Recorrida con Playwright (capturas de cada pantalla, escritorio y celular) y con un
+   `docker compose pause ingest` real con 3 partidas abiertas: se siguió jugando, la IA respondió
+   en <0,5 s, la barra avisó "GameStats sin conexión · N eventos en espera" y tras el `unpause`
+   llegó todo sin rechazos. Falta que el usuario la pruebe a mano.
+7. Opcional, solo si sobra tiempo: `EventBuffer` en IndexedDB + `navigator.locks`.
 
 Un commit por fase, con un resumen corto al terminar cada una.
 

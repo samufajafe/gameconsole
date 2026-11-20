@@ -4,6 +4,7 @@ import type { GameRanking, GameStatsClient, IngestMetrics, MatchListItem, MatchR
 export interface PanelGame {
   id: string;
   title: string;
+  icon?: string;
 }
 
 /** Partida abierta en esta pestana, para mostrar si GameStats ya la analizo. */
@@ -20,6 +21,8 @@ export interface StatsPanelOptions {
   playerId: () => string;
   localMatches: () => readonly LocalMatch[];
   intervalMs?: number;
+  /** Avisa en cada consulta si GameStats respondio, para el indicador de la barra. */
+  onConnection?: (ok: boolean) => void;
 }
 
 /** Cuantos detalles de partida nuevos se piden por ciclo, para no saturar a GameStats. */
@@ -80,12 +83,13 @@ export class StatsPanel {
       jugador ? client.player(jugador).catch(() => undefined) : Promise.resolve(null),
     ]);
 
+    this.opts.onConnection?.(metricas !== null && listado !== null);
     if (listado) await this.traerDetalles(listado);
 
     this.root.innerHTML = `
       <div class="panel-head">
-        <h2>Panel GameStats</h2>
-        <span class="muted">consulta directa a GameStats cada ${(this.opts.intervalMs ?? 3000) / 1000} s · ${esc(new Date().toLocaleTimeString())}</span>
+        <h2 class="section-title">Panel GameStats</h2>
+        <span class="muted">Datos tal como los calcula GameStats · se actualiza cada ${(this.opts.intervalMs ?? 3000) / 1000} s · última: ${esc(new Date().toLocaleTimeString())}</span>
       </div>
       <div class="panel-general">
         ${this.generales(metricas)}
@@ -169,7 +173,7 @@ export class StatsPanel {
 
     return `
       <section class="card game-stats game-${esc(g.id)}">
-        <h3>${esc(g.title)} <small class="muted">gameId: ${esc(g.id)}</small></h3>
+        <h3>${g.icon ? `<span aria-hidden="true">${g.icon}</span> ` : ''}${esc(g.title)} <small class="muted">gameId: ${esc(g.id)}</small></h3>
         <p class="big">${listado ? delJuego.length : '—'} <span class="muted">instancias analizadas</span></p>
         ${this.ranking(ranking)}
         ${ultima ? this.ultima(ultima) : '<p class="muted">Sin partidas analizadas todavía.</p>'}

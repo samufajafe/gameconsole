@@ -5,6 +5,7 @@ import { AI_ID, BattleshipGame } from '../../src/games/battleship/BattleshipGame
 import { Board } from '../../src/games/battleship/Board';
 import { Coord } from '../../src/games/battleship/Coord';
 import { placeFleet, STANDARD_FLEET } from '../../src/games/battleship/Fleet';
+import { FleetPlacement } from '../../src/games/battleship/FleetPlacement';
 import { PrologAI } from '../../src/games/battleship/PrologAI';
 import { Ship } from '../../src/games/battleship/Ship';
 import type { OpponentView, ShotDecision, ShotStrategy } from '../../src/games/battleship/ShotStrategy';
@@ -239,6 +240,81 @@ describe('BattleshipGame', () => {
     game.fire('J1');
     expect(game.canRearrange).toBe(false);
     expect(() => game.rearrangeFleet()).toThrow();
+  });
+
+  it('acepta la flota colocada a mano y la usa en la batalla', async () => {
+    const { game, sink } = partida(['J10']);
+    // Todos los barcos en vertical, en columnas pares.
+    const manual = STANDARD_FLEET.map((s, i) => Ship.straight(s.ship, s.size, new Coord(0, i * 2), false));
+    game.setPlayerFleet(manual);
+    expect(game.playerBoard.shipAt(new Coord(4, 0))?.name).toBe('carrier');
+    expect(game.playerBoard.shipAt(new Coord(0, 1))).toBeUndefined();
+    // Son copias: lo que pase en el tablero no toca los barcos de la vista.
+    game.fire('J1');
+    await game.whenAiDone();
+    expect(manual.every((s) => !s.isSunk)).toBe(true);
+    // La colocacion no viaja en ningun evento.
+    expect(JSON.stringify(sink.events)).not.toContain('"cells"');
+    expect(() => game.setPlayerFleet(manual)).toThrow(/disparos/);
+  });
+
+  it('rechaza una flota incompleta, de otros barcos o que se pisa', () => {
+    const { game } = partida([]);
+    const antes = game.playerBoard;
+    const flota = flotaEnFilas();
+    expect(() => game.setPlayerFleet(flota.slice(1))).toThrow(/flota debe ser/);
+    expect(() => game.setPlayerFleet([...flota.slice(1), Ship.straight('carrier', 4, new Coord(9, 0), true)])).toThrow();
+    const pisa = [...flota.slice(0, 4), Ship.straight('destroyer', 2, new Coord(0, 0), false)];
+    expect(() => game.setPlayerFleet(pisa)).toThrow(/pisan/);
+    expect(game.playerBoard).toBe(antes);
+  });
+});
+
+describe('FleetPlacement', () => {
+  it('coloca barco por barco y avisa cuando uno no cabe', () => {
+    const p = new FleetPlacement();
+    expect(p.selected?.ship).toBe('carrier');
+    expect(p.canPlace(new Coord(0, 6))).toBe(false); // A7 horizontal: se sale por la derecha
+    expect(() => p.place(new Coord(0, 6))).toThrow(/no cabe/);
+    p.place(new Coord(0, 0));
+    expect(p.selected?.ship).toBe('battleship');
+    p.rotate();
+    expect(p.canPlace(new Coord(0, 2))).toBe(false); // pisaria al portaaviones
+    p.place(new Coord(1, 0));
+    expect(p.shipAt(new Coord(4, 0))?.name).toBe('battleship');
+    expect(p.isComplete).toBe(false);
+  });
+
+  it('levanta un barco puesto para moverlo, con su orientacion', () => {
+    const p = new FleetPlacement();
+    p.rotate();
+    p.place(new Coord(0, 0)); // portaaviones vertical A1..E1
+    p.pickUp(new Coord(2, 0));
+    expect(p.isPlaced('carrier')).toBe(false);
+    expect(p.selected?.ship).toBe('carrier');
+    expect(p.horizontal).toBe(false);
+  });
+
+  it('completa al azar lo que falta sin mover lo que puso el jugador', () => {
+    const p = new FleetPlacement(STANDARD_FLEET, 10, semilla(7));
+    p.place(new Coord(9, 0)); // portaaviones J1..J5
+    p.fillRandom();
+    expect(p.isComplete).toBe(true);
+    expect(p.selected).toBeNull();
+    expect(p.shipAt(new Coord(9, 4))?.name).toBe('carrier');
+    // Lo que entrega siempre es un tablero valido.
+    expect(() => new Board(p.ships, 10)).not.toThrow();
+  });
+
+  it('parte de la flota al azar y permite limpiar todo', () => {
+    const p = FleetPlacement.desde(placeFleet(STANDARD_FLEET, 10, semilla(3)));
+    expect(p.isComplete).toBe(true);
+    expect(p.selected).toBeNull();
+    p.clear();
+    expect(p.ships).toHaveLength(0);
+    expect(p.selected?.ship).toBe('carrier');
+    p.randomize();
+    expect(p.isComplete).toBe(true);
   });
 });
 

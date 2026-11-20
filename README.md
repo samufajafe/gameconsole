@@ -44,19 +44,49 @@ docker compose down                     # bajar todo (GameStats guarda en memori
 ### Cómo se juega
 
 1. Arriba a la derecha está el **alias**: es el `playerId` que usa GameStats. Se guarda en el
-   navegador.
-2. En **Juegos** se pulsa *Nueva partida* en cualquier juego, todas las veces que se quiera. Cada
-   instancia tiene su `matchId` (UUID) y un indicador de envío (`✓ N eventos`, `reintentando…`).
-3. **Battleship**: se dispara con clic sobre la flota enemiga. Después de cada disparo juega la
-   IA, que muestra su modo (`HUNT`/`TARGET`) y su razonamiento. Mientras nadie haya disparado, se
-   puede recolocar la flota propia.
-4. **Racing**: se pide el nombre del segundo piloto. Hay que hacer clic en la carrera para que
-   reciba el teclado. Cada piloto acelera **alternando** sus dos teclas. Acelerar durante la
-   cuenta regresiva es salida en falso: +3 s (`PENALTY`).
-5. Al cerrar una instancia (✕) o la pestaña a mitad de partida, la partida se **abandona**: se
-   manda `PLAYER_DISCONNECTED` y `MATCH_FINISHED` para que GameStats no la deje abierta para
-   siempre.
-6. **Panel**: consulta a GameStats cada 3 s.
+   navegador. Si no es válido, el aviso aparece junto al campo y los botones *Jugar* se
+   desactivan. Al lado, un indicador dice si GameStats está en línea o cuántos eventos esperan.
+2. En **Juegos** se pulsa *Jugar* en cualquier juego, todas las veces que se quiera. Cada tarjeta
+   trae *Cómo se juega*. Cada instancia tiene su `matchId` (UUID) y un indicador de envío
+   (`✓ N eventos enviados`, `⏳ esperando a GameStats`, `⟳ GameStats no responde · N en cola`).
+3. **Blackjack**: la apuesta se arma con fichas (5, 25, 50, 100, *Todo*) o escribiéndola. Con la
+   mesa seleccionada hay atajos: **P** pide carta, **M** se planta y **Enter** reparte.
+4. **Battleship**: primero se prepara la flota. Viene colocada **al azar**: se puede usar tal
+   cual, *Sortear otra* o **Colocar a mano**. A mano se elige un barco, se hace clic en la celda
+   donde empieza y **R** lo gira; la vista previa sale en verde si cabe y en rojo si no. Un clic
+   sobre un barco puesto lo levanta para moverlo, y *Completar al azar* pone los que falten. La
+   colocación no viaja en ningún evento. En la batalla se dispara con clic, o con las flechas y
+   Enter. Después de cada disparo juega la IA, y su bitácora muestra el modo (`HUNT`/`TARGET`) y
+   el razonamiento de cada jugada.
+5. **Racing**: un diálogo pide el nombre del segundo piloto. La carrera toma el foco del teclado
+   sola; si se pierde, basta un clic en ella. Cada piloto acelera **alternando** sus dos teclas,
+   y la siguiente que toca se ilumina. Acelerar antes de la luz verde es salida en falso: +3 s
+   (`PENALTY`).
+6. Al cerrar una instancia en curso (✕), la consola pide confirmación, porque la partida se
+   **abandona**: se manda `PLAYER_DISCONNECTED` y `MATCH_FINISHED` para que GameStats no la deje
+   abierta para siempre. Lo mismo pasa al cerrar la pestaña a mitad de partida.
+7. **Panel**: consulta a GameStats cada 3 s.
+
+### Interfaz
+
+Tiene estética arcade (neón sobre fondo oscuro y fuente pixel *Press Start 2P*, servida desde la
+propia consola). Está diseñada con las 10 heurísticas de usabilidad de Nielsen:
+
+| Heurística | En la consola |
+|---|---|
+| Visibilidad del estado | indicador de GameStats en la barra, envío por partida, turno en grande en Battleship, semáforo y cronómetro en Racing |
+| Relación con el mundo real | mesa de fieltro, fichas y cartas con su palo; barcos con nombre (Portaaviones, Acorazado…); semáforo de largada |
+| Control y libertad | *Cancelar* y *Vaciar tablero* al colocar la flota; levantar y mover barcos; confirmar antes de abandonar o levantarse de la mesa; Esc cierra los diálogos |
+| Consistencia | cada juego tiene su color en catálogo, tarjeta y panel; el amarillo siempre es la acción principal |
+| Prevención de errores | botones desactivados si el alias o la apuesta no sirven; fichas que no alcanzan, apagadas; vista previa roja si un barco no cabe; *¡A la batalla!* solo con la flota completa |
+| Reconocer antes que recordar | teclas visibles en cada botón y carril; leyenda del tablero; reglas en *Cómo se juega* y sobre la mesa |
+| Flexibilidad | atajos de teclado (P/M/Enter, R, flechas, A/D J/L) además del ratón |
+| Diseño minimalista | la fuente pixel solo va en títulos y marcadores; el texto corrido usa la del sistema para leerse bien |
+| Recuperarse de errores | mensajes en español junto a donde ocurrió, con la causa y qué hacer ("gíralo con R o elige otra celda") |
+| Ayuda | *Cómo se juega* en cada juego; ayudas cortas en cada pantalla |
+
+También respeta *menos movimiento* del sistema operativo (sin animaciones), tiene foco visible en
+todos los controles y se adapta al ancho del celular.
 
 ### Qué muestra el panel
 
@@ -195,8 +225,8 @@ publicada:
 web/                 consola (TypeScript + Vite), servida por nginx
   src/core/          Game, Player, EventFactory, EventSink: el núcleo POO
   src/events/        MatchEmitter, ExponentialBackoff, HttpIngestTransport, EventBuffer
-  src/games/         blackjack/, battleship/, racing/: reglas + vista de cada juego
-  src/console/       catálogo, instancias simultáneas
+  src/games/         blackjack/, battleship/ (con FleetPlacement), racing/: reglas + vista
+  src/console/       catálogo, instancias simultáneas, diálogos
   src/panel/         cliente de GameStats y panel
   tests/             vitest: contrato, emisor, juegos, e2e
   nginx/             proxy del mismo origen

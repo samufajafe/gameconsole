@@ -1,3 +1,5 @@
+// Fuente pixel servida desde la propia consola (sin depender de internet); solo el subconjunto latino.
+import '@fontsource/press-start-2p/latin-400.css';
 import './styles.css';
 import { ConsoleApp } from './console/ConsoleApp';
 import type { GameDescriptor } from './console/GameDescriptor';

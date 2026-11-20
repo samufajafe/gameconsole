@@ -6,7 +6,7 @@ import { ExponentialBackoff, type RetryPolicy } from '../../events/RetryPolicy';
 import { Board, type ShotOutcome } from './Board';
 import { Coord } from './Coord';
 import { BOARD_SIZE, placeFleet, STANDARD_FLEET, type ShipSpec } from './Fleet';
-import type { Ship } from './Ship';
+import { Ship } from './Ship';
 import type { ShotDecision, ShotStrategy } from './ShotStrategy';
 
 export const AI_ID = 'prolog-ai';
@@ -113,6 +113,23 @@ export class BattleshipGame extends Game {
   rearrangeFleet(): void {
     if (!this.canRearrange) throw new Error('Ya empezaron los disparos');
     this.propio = new Board(placeFleet(this.fleet, BOARD_SIZE, this.random), BOARD_SIZE);
+    this.changed();
+  }
+
+  /**
+   * Pone la flota que el jugador coloco a mano. Tiene que ser exactamente la flota de la partida
+   * (mismos barcos y tamanos), sin pisarse ni salirse; si no, lanza y no cambia nada.
+   */
+  setPlayerFleet(ships: readonly Ship[]): void {
+    if (!this.canRearrange) throw new Error('Ya empezaron los disparos');
+    const pedidos = this.fleet.map((s) => `${s.ship}:${s.size}`).sort();
+    const dados = ships.map((s) => `${s.name}:${s.size}`).sort();
+    if (pedidos.join() !== dados.join()) throw new Error(`La flota debe ser ${pedidos.join(', ')}`);
+    // Copias limpias: los barcos llevan la cuenta de sus impactos.
+    this.propio = new Board(
+      ships.map((s) => new Ship(s.name, s.cells)),
+      BOARD_SIZE,
+    );
     this.changed();
   }
 
