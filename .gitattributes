@@ -1,0 +1,5 @@
+# Finales de linea LF siempre, tambien en Windows: los scripts, el Prolog y las plantillas de nginx
+# corren dentro de contenedores Linux.
+* text=auto eol=lf
+*.png binary
+*.jpg binary

@@ -1,0 +1,12 @@
+# Construye GameStats desde ../gamestats en vez de bajar la imagen publicada. Solo LEE ese
+# directorio como contexto de build; no lo modifica.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up --build -d --wait
+
+services:
+  analytics:
+    build: ../gamestats
+    image: gamestats:local
+  ingest:
+    build: ../gamestats
+    image: gamestats:local
