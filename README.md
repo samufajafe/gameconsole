@@ -4,6 +4,9 @@ Consola web de videojuegos (Proyecto 2, Lenguajes de Programación). Tiene tres 
 pueden jugar a la vez, en varias instancias y pestañas. Cada evento de juego se manda a
 **GameStats** (Proyecto 1), y un panel muestra lo que GameStats calcula.
 
+**Video de demostración:** https://youtu.be/0JOzJ8Hfj_0 (los tres juegos, la ejecución
+concurrente, la IA en Prolog, el panel con GameStats, una caída de GameStats y el CI/CD).
+
 | Juego | Modo | Contra |
 |---|---|---|
 | **Blackjack** | PVE | el crupier (se planta en 17) |

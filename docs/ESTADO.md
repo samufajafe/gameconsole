@@ -58,7 +58,8 @@ Fase 1 verificada el 19 nov: `web/package-lock.json` generado y commiteado; se a
    `docker compose pause ingest` real con 3 partidas abiertas: se siguió jugando, la IA respondió
    en <0,5 s, la barra avisó "GameStats sin conexión · N eventos en espera" y tras el `unpause`
    llegó todo sin rechazos. Falta que el usuario la pruebe a mano.
-7. Opcional, solo si sobra tiempo: `EventBuffer` en IndexedDB + `navigator.locks`.
+7. ~~Video de demostración~~ **hecho**: https://youtu.be/0JOzJ8Hfj_0 (enlazado en el README).
+8. Opcional, solo si sobra tiempo: `EventBuffer` en IndexedDB + `navigator.locks`.
 
 Un commit por fase, con un resumen corto al terminar cada una.
 
